@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: django
+  template:
+    metadata:
+      labels:
+        app: django
+    spec:
+      imagePullSecrets:
+      - name: acr-secret
+      containers:
+      - name: django
+        image: employeedocker.azurecr.io/emp-docker:v1.0
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_NAME
+          value: "db.sqlite3"
+        command:
+        - sh
+        - -c
+        - |
+          python manage.py migrate &&
+          python manage.py runserver 0.0.0.0:8000
+        volumeMounts:
+        - name: code-volume
+          mountPath: /code
+      volumes:
+      - name: code-volume
+        emptyDir: {}  # Use an empty directory for volumes or specify a persistent volume if needed
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-service
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 8000
+  selector:
+    app: django
